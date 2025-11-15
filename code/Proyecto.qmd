@@ -1,0 +1,366 @@
+---
+title: "Proyecto Herramientas"
+author: "Jeremy Garcia Solano"
+format: html
+editor: visual
+---
+# Carga de paquetes
+```{r}
+library(tidyverse)
+library(readr)
+```
+
+
+
+# Carga de df
+```{r}
+# PAISES SELECCIONADOS PARA ANALISIS GENERAL
+paises <- c("Argentina", "Australia", "Austria", "Belgium", "Bulgaria",
+  "Canada", "Chile", "Colombia", "Costa Rica", "Croatia",
+  "Cyprus", "Czechia", "Denmark", "Estonia", "Finland",
+  "France", "Germany", "Greece", "Hungary", "Iceland",
+  "Indonesia", "Ireland", "Israel", "Italy", "Japan",
+  "Latvia", "Lithuania", "Luxembourg", "Mexico", "Netherlands",
+  "New Zealand", "Norway", "Portugal", "Romania", "Slovakia",
+  "Slovenia", "South Korea", "Spain", "Sweden", "Switzerland",
+  "Turkey", "United Kingdom", "United States")
+
+# PAISES FILTRADOS PARA ANALISIS ESPECIFICO
+paises_filtrados <- c(
+  "Costa Rica", "United States", "Japan", "Indonesia", "Switzerland")
+
+# ESPERANZA DE VIDA
+df_1 <- read.csv("https://ourworldindata.org/grapher/life-expectancy.csv?v=1&csvType=full&useColumnShortNames=true")
+
+# GASTO EN SALUD $
+df_2 <- read.csv("https://ourworldindata.org/grapher/health-expenditure-and-financing-per-capita.csv?v=1&csvType=full&useColumnShortNames=true")
+
+# PIB PER CAPITA $
+df_3 <- read.csv("https://ourworldindata.org/grapher/gdp-per-capita-worldbank.csv?v=1&csvType=full&useColumnShortNames=true")%>% 
+  filter(Year %in% c(2013:2023) ) %>% 
+  filter(Entity %in% paises)
+df_3$owid_region <- NULL
+
+
+# TASA MORTALIDAD INFANTIL
+df_4 <- read.csv("https://ourworldindata.org/grapher/child-mortality.csv?v=1&csvType=full&useColumnShortNames=true")
+
+
+
+# DF DE CONTINENTES
+df_continentes <- data.frame(
+  country = c(
+    "Argentina", "Australia", "Austria", "Belgium", "Bulgaria",
+    "Canada", "Chile", "Colombia", "Costa Rica", "Croatia",
+    "Cyprus", "Czechia", "Denmark", "Estonia", "Finland",
+    "France", "Germany", "Greece", "Hungary", "Iceland",
+    "Indonesia", "Ireland", "Israel", "Italy", "Japan",
+    "Latvia", "Lithuania", "Luxembourg", "Mexico", "Netherlands",
+    "New Zealand", "Norway", "Portugal", "Romania", "Slovakia",
+    "Slovenia", "South Korea", "Spain", "Sweden", "Switzerland",
+    "Turkey", "United Kingdom", "United States"
+  ),
+  
+  continent = c(
+    "Americas", "Oceania", "Europe", "Europe", "Europe",
+    "Americas", "Americas", "Americas", "Americas", "Europe",
+    "Europe", "Europe", "Europe", "Europe", "Europe",
+    "Europe", "Europe", "Europe", "Europe", "Europe",
+    "Asia", "Europe", "Asia", "Europe", "Asia",
+    "Europe", "Europe", "Europe", "Americas", "Europe",
+    "Oceania", "Europe", "Europe", "Europe", "Europe",
+    "Europe", "Asia", "Europe", "Europe", "Europe",
+    "Europe", "Europe", "Americas"
+  )
+)
+
+# DF GENERAL
+df_final <- df_1 %>% 
+  left_join(df_2, by = c("Entity", "Year","Code")) %>% 
+  filter(!is.na(ppp_dollars_per_capita__financing_scheme_total)) %>% 
+  filter(Year >=2013) %>% 
+  filter(Entity%in%paises) %>% 
+  left_join(df_4, by = c("Entity", "Year","Code")) %>% 
+  left_join(df_3, by = c("Entity", "Year","Code")) %>% 
+  left_join(df_continentes, by = c("Entity" = "country"))
+
+# ORDENAR COLUMNAS POR ELECCION PROPIA
+df_final <- df_final %>% 
+  transmute(
+    Entity,
+    Code,
+    continent,
+    Year,
+    life_expectancy_0,
+    ppp_dollars_per_capita__financing_scheme_total,
+    child_mortality_rate,
+    ny_gdp_pcap_pp_kd
+  )
+  
+
+# DF FILTRADO
+df_filtrado <- df_final %>% 
+  filter(Entity %in% c(paises_filtrados))
+```
+
+
+# Graficos de variables
+```{r}
+
+# GRAFICOS DE ESPERANZAS DE VIDA GENERAL
+df_final %>%
+  ggplot(aes(x = Year, y = life_expectancy_0, color = Entity,group = Entity)) +
+  geom_line() +
+  labs(title = "Evolución de la esperanza de vida (2013–2023)",
+       x = "Año", y = "Esperanza de vida")
+
+# GRAFICOS DE ESPERANZAS DE VIDA GENERAL FILTRADO
+df_filtrado %>%
+  ggplot(aes(x = Year, y = life_expectancy_0, color = Entity, group = Entity)) +
+  geom_line()+
+  geom_smooth(se = FALSE)+
+  labs(title = "Evolución de la esperanza de vida (2013–2023)",
+       x = "Año", y = "Esperanza de vida")
+
+
+
+# GRAFICOS DE GASTO EN SALUD PER CÁPITA GENERAL
+df_final %>%
+  ggplot(aes(Year, ppp_dollars_per_capita__financing_scheme_total, color = Entity)) +
+  geom_line() +
+  labs(title = "Gasto en salud per cápita (2013–2023)",
+       x = "Año", y = "Gasto per cápita (USD)")
+
+# GRAFICOS DE GASTO EN SALUD PER CÁPITA FILTRADO
+df_filtrado %>%
+  ggplot(aes(Year, ppp_dollars_per_capita__financing_scheme_total, color = Entity)) +
+  geom_line() +
+  labs(title = "Gasto en salud per cápita (2013–2023)",
+       x = "Año", y = "Gasto per cápita (USD)")
+
+
+
+# MORTALIDAD INFANTIL GENERAL
+df_final %>%
+  ggplot(aes(Year, child_mortality_rate, color = Entity)) +
+  geom_line() +
+  labs(title = "Mortalidad infantil (2013–2023)",
+       x = "Año", y = "Muertes por cada 1,000 nacimientos")
+
+# MORTALIDAD INFANTIL FILTRADO
+df_filtrado %>%
+  ggplot(aes(Year, child_mortality_rate, color = Entity)) +
+  geom_line() +
+  labs(title = "Mortalidad infantil (2013–2023)",
+       x = "Año", y = "Muertes por cada 1,000 nacimientos")
+
+
+
+# PIB PER CAPITA GENERAL
+df_final %>%
+  ggplot(aes(Year, ny_gdp_pcap_pp_kd, color = Entity)) +
+  geom_line() +
+  scale_y_continuous(labels = scales::comma)+
+  labs(title = "PIB per cápita (PPP, 2013–2023)",
+       x = "Año", y = "PIB per cápita (USD PPP)")
+
+# PIB PER CAPITA GENERAL
+df_filtrado %>%
+  ggplot(aes(Year, ny_gdp_pcap_pp_kd, color = Entity)) +
+  geom_line() +
+  scale_y_continuous(labels = scales::comma)+
+  labs(title = "PIB per cápita (PPP, 2013–2023)",
+       x = "Año", y = "PIB per cápita (USD PPP)")
+```
+# Graficos de Relaciones
+```{r}
+# GRAFICO DE RELACION ENTRE GPC VS ESPERANZA GENERAL
+df_final %>%
+  ggplot(aes(ppp_dollars_per_capita__financing_scheme_total, life_expectancy_0)) +
+  geom_point(size = 1.5) +
+  geom_smooth(method = "lm", se = FALSE)+
+  labs(title = "Relación entre gasto en salud y esperanza de vida",
+       x = "Gasto per cápita en salud", y = "Esperanza de vida")
+# GRAFICO DE RELACION ENTRE GPC VS ESPERANZA FILTRADO
+df_filtrado %>%
+  ggplot(aes(ppp_dollars_per_capita__financing_scheme_total, life_expectancy_0, color = Entity)) +
+  geom_point(size = 1) +
+  geom_smooth(method = "lm", se = FALSE)+
+  labs(title = "Relación entre gasto en salud y esperanza de vida",
+       x = "Gasto per cápita en salud", y = "Esperanza de vida")
+
+
+
+# GRAFICO PIB PER CAPITA VS ESPERANZA GENERAL
+df_final %>%
+  ggplot(aes(ny_gdp_pcap_pp_kd, life_expectancy_0)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  scale_x_continuous(labels = scales::comma)+
+  labs(title = "PIB per cápita vs Esperanza de vida",
+        x = "PIB per cápita", y = "Esperanza de vida")
+# GRAFICO PIB PER CAPITA VS ESPERANZA FILTRADO
+df_filtrado %>%
+  ggplot(aes(ny_gdp_pcap_pp_kd, life_expectancy_0, color = Entity)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  scale_x_continuous(labels = scales::comma)+
+  labs(title = "PIB per cápita vs Esperanza de vida",
+        x = "PIB per cápita", y = "Esperanza de vida")
+
+
+# GRAFICO PIB PER CAPITA VS MORTALIDAD INFANTIL GENERAL
+df_final %>%
+  ggplot(aes(ny_gdp_pcap_pp_kd, child_mortality_rate)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  scale_x_log10() +
+  scale_x_continuous(labels = scales::comma)+
+  labs(title = "PIB per cápita vs Mortalidad infantil",
+       x = "PIB per cápita", y = "Mortalidad infantil")
+# GRAFICO PIB PER CAPITA VS MORTALIDAD INFANTIL FILTRADO
+df_filtrado %>%
+  ggplot(aes(ny_gdp_pcap_pp_kd, child_mortality_rate, color=Entity)) +
+  geom_point(size=1) +
+  geom_smooth(method = "lm", se = FALSE) +
+  scale_x_log10() +
+  labs(title = "PIB per cápita vs Mortalidad infantil",
+       x = "PIB per cápita", y = "Mortalidad infantil",)
+
+
+
+#GRAFICO DE GASTO EN SALUD VS MORTALIDAD INFANTIL GENERAL
+df_final %>%
+  ggplot(aes(ppp_dollars_per_capita__financing_scheme_total, child_mortality_rate)) +
+  geom_point(size=1) +
+  geom_smooth(method = "lm", se = FALSE) +
+  scale_x_log10()+
+  labs(title="Gasto en Salud vs Mortalidad infantil",
+       x="Gasto per cápita en salud", y= "Mortalidad infantil")
+#GRAFICO DE GASTO EN SALUD VS MORTALIDAD INFANTIL FILTRADO
+df_filtrado %>%
+  ggplot(aes(ppp_dollars_per_capita__financing_scheme_total, child_mortality_rate,color= Entity)) +
+  geom_point(size=1) +
+  geom_smooth(method = "lm", se = FALSE) +
+  scale_x_log10()+
+  labs(title="Gasto en Salud vs Mortalidad infantil",
+       x="Gasto per cápita en salud", y= "Mortalidad infantil")
+
+
+
+
+```
+
+
+# Correlaciones
+```{r}
+# CORRELACION GASTO ESPERANZA
+cor(
+  df_final$ppp_dollars_per_capita__financing_scheme_total,
+  df_final$life_expectancy_0,
+    method="pearson",
+  use = "complete.obs"
+)
+
+#CORRELACION PIB ESPERANZA DE VIDA
+cor(
+  df_final$ny_gdp_pcap_pp_kd,
+  df_final$life_expectancy_0,
+    method="pearson",
+  use = "complete.obs"
+)
+
+# CORRELACION ENTRE PIB Y MORTALIDAD INFANTIL GENERAL
+cor(
+  df_final$ny_gdp_pcap_pp_kd,
+  df_final$child_mortality_rate,
+  method="pearson",
+  use = "complete.obs"
+)
+
+
+# CORRELACION GASTO MORTALIDAD GENERAL
+cor(
+  df_final$ppp_dollars_per_capita__financing_scheme_total,
+  df_final$child_mortality_rate,
+    method="pearson",
+  use = "complete.obs"
+)
+
+
+
+
+
+
+
+
+```
+
+# Estadisticas útiles
+```{r}
+# 10 PAISES CON MAYOR ESPERANZA DE VIDA (2013-2023)
+df_final %>%
+  group_by(Entity) %>%
+  summarise(Promedio_Esperanza_de_Vida = mean(life_expectancy_0, na.rm = TRUE)) %>%
+  arrange(desc(Promedio_Esperanza_de_Vida)) %>%
+  slice(1:10)
+
+# 10 PAISES CON MENOR ESPERANZA DE VIDA (2013-2023)
+df_final %>%
+  group_by(Entity) %>%
+  summarise(Promedio_Esperanza_de_Vida = mean(life_expectancy_0, na.rm = TRUE)) %>%
+  arrange(Promedio_Esperanza_de_Vida) %>%
+  slice(1:10)
+
+
+
+# 10 PAISES CON MAYOR GASTO PER CAPITA EN SALUD
+df_final %>%
+  group_by(Entity) %>%
+  summarise(Gasto_PC_promedio = mean(ppp_dollars_per_capita__financing_scheme_total, na.rm = TRUE)) %>%
+  arrange(desc(Gasto_PC_promedio)) %>%
+  slice(1:10)
+
+# 10 PAISES CON MENOR GASTO PER CAPITA EN SALUD
+df_final %>%
+  group_by(Entity) %>%
+  summarise(Gasto_PC_promedio = mean(ppp_dollars_per_capita__financing_scheme_total, na.rm = TRUE)) %>%
+  arrange(Gasto_PC_promedio) %>%
+  slice(1:10)
+
+
+
+# 10 PAISES QUE MAS GASTAN EN SALUD EN RELACION CON SU INGRESO(PIB ) EN PORCENTAJE
+df_final %>% 
+  group_by(Entity) %>% 
+  summarise(
+    Gasto_PIB = mean(ny_gdp_pcap_pp_kd)/mean(ppp_dollars_per_capita__financing_scheme_total)
+  ) %>% 
+  arrange(desc(Gasto_PIB)) %>%
+  slice(1:10)
+
+# 10 PAISES QUE MENOS GASTAN EN SALUD EN RELACION CON SU INGRESO(PIB ) EN PORCENTAJE
+df_final %>% 
+  group_by(Entity) %>% 
+  summarise(
+    Gasto_PIB = mean(ny_gdp_pcap_pp_kd)/mean(ppp_dollars_per_capita__financing_scheme_total)
+  ) %>% 
+  arrange(Gasto_PIB) %>%
+  slice(1:10)
+
+
+
+#VARIACION PROMEDIO DE ESPERANZA DE VIDA Y GASTO EN SALUD
+df_final %>%
+  group_by(Entity) %>%
+  summarise(
+    "Cambio % Esperanza" = ((life_expectancy_0[Year == 2023] - life_expectancy_0[Year == 2013])/life_expectancy_0[Year == 2013])*100,
+    "Cambio % Gasto Salud" = ( (ppp_dollars_per_capita__financing_scheme_total[Year == 2023]-ppp_dollars_per_capita__financing_scheme_total[Year == 2013])  / ppp_dollars_per_capita__financing_scheme_total[Year == 2013] ) * 100)
+
+
+
+```
+
+
+
+
